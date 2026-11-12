@@ -4,23 +4,25 @@ project(prir-projekt LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Typ budowania" FORCE)   # pomiary tylko w trybie zoptymalizowanym
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)   # performance is measured only in optimized builds
 endif()
 
-option(PIPELINE_WITH_OPENMP "Silnik OpenMP" ON)
-option(PIPELINE_WITH_MPI    "Silnik MPI"    OFF)
-option(PIPELINE_WITH_CUDA   "Silnik CUDA"   OFF)
-option(PIPELINE_WITH_VIDEO  "Wideo przez biblioteki FFmpeg" ON)
+option(PIPELINE_WITH_OPENMP "OpenMP engine" ON)
+option(PIPELINE_WITH_MPI    "MPI engine"    OFF)
+option(PIPELINE_WITH_CUDA   "CUDA engine"   OFF)
+option(PIPELINE_WITH_VIDEO  "Video support via the FFmpeg libraries" ON)
 
-# Pliki źródłowe dopisujemy tutaj i w blokach poniżej, gdy powstają w kolejnych krokach.
-# Na start pipeline_core ma jeden pusty plik, bo biblioteka statyczna musi mieć co najmniej jedno źródło.
+# Source files are added to the targets below as later steps of the plan create them.
+# The MPI and CUDA blocks already name their sources, so those options stay OFF until the files exist.
 add_library(pipeline_core STATIC
-  src/common/pgm.cpp)
+  src/common/pgm.cpp
+  src/common/frame_source.cpp)
 target_include_directories(pipeline_core PUBLIC include)
 
 if(PIPELINE_WITH_VIDEO)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libswscale libavutil)
+  target_sources(pipeline_core PRIVATE src/common/video.cpp)
   target_compile_definitions(pipeline_core PUBLIC PIPELINE_HAVE_VIDEO)
   target_link_libraries(pipeline_core PUBLIC PkgConfig::FFMPEG)
 endif()
@@ -43,7 +45,7 @@ endif()
 if(PIPELINE_WITH_CUDA)
   enable_language(CUDA)
   set(CMAKE_CUDA_STANDARD 17)
-  set(PIPELINE_CUDA_ARCH native CACHE STRING "Architektura GPU, np. 90")
+  set(PIPELINE_CUDA_ARCH native CACHE STRING "GPU architecture, e.g. 90")
   add_executable(pipeline_cuda src/cuda/main_cuda.cu)
   set_target_properties(pipeline_cuda PROPERTIES CUDA_ARCHITECTURES ${PIPELINE_CUDA_ARCH})
   target_link_libraries(pipeline_cuda PRIVATE pipeline_core)
@@ -59,6 +61,7 @@ if(BUILD_TESTING)
   include(GoogleTest)
 
   add_executable(pipeline_tests
+    tests/test_pgm.cpp
     tests/test_weights.cpp)
   target_link_libraries(pipeline_tests PRIVATE pipeline_core GTest::gtest_main)
   if(PIPELINE_WITH_OPENMP)

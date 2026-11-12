@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
 
-// Pusty test potwierdza tylko, że GoogleTest buduje się i działa przez ctest.
-// W kroku 4 zastąpią go testy wag filtru.
+// This empty test only confirms that GoogleTest builds and runs through ctest.
+// Step 4 of the plan replaces it with tests of the Gaussian filter weights.
 TEST(Build, GoogleTestRuns) {}
