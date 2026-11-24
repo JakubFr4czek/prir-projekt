@@ -15,8 +15,10 @@ option(PIPELINE_WITH_VIDEO  "Video support via the FFmpeg libraries" ON)
 # Source files are added to the targets below as later steps of the plan create them.
 # The MPI and CUDA blocks already name their sources, so those options stay OFF until the files exist.
 add_library(pipeline_core STATIC
+  src/common/weights.cpp
   src/common/pgm.cpp
-  src/common/frame_source.cpp)
+  src/common/frame_source.cpp
+  src/seq/engine_seq.cpp)
 target_include_directories(pipeline_core PUBLIC include)
 
 if(PIPELINE_WITH_VIDEO)
@@ -62,7 +64,8 @@ if(BUILD_TESTING)
 
   add_executable(pipeline_tests
     tests/test_pgm.cpp
-    tests/test_weights.cpp)
+    tests/test_weights.cpp
+    tests/test_filters.cpp)
   target_link_libraries(pipeline_tests PRIVATE pipeline_core GTest::gtest_main)
   if(PIPELINE_WITH_OPENMP)
     target_compile_definitions(pipeline_tests PRIVATE PIPELINE_HAVE_OPENMP)
