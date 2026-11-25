@@ -85,7 +85,23 @@ TEST(GaussBlur, ConstantImageStaysUnchanged) {
 TEST(GaussBlur, SeparablePassesMatchDirect2D) {
     const Params params[] = {make_params(1.0, 1, 0), make_params(1.0, 3, 0), make_params(2.0, 6, 0),
                              make_params(3.0, 9, 0), make_params(1.0, 0, 0)};
-    const int sizes[][2] = {{1, 1}, {1, 9}, {9, 1}, {2, 3}, {17, 11}, {40, 31}};
+    const int sizes[][2] = {{2, 3}, {17, 11}, {40, 31}};
+    unsigned seed = 1;
+    for (const Params& p : params)
+        for (const auto& size : sizes) {
+            const Image<uint8_t> in = random_image(size[0], size[1], seed++);
+            ASSERT_EQ(blur(p, in.view()).pixels, blur_direct_2d(p, in.view()).pixels)
+                << "radius " << p.radius << ", image " << size[0] << "x" << size[1];
+        }
+}
+
+// In an image one pixel wide or high every neighbour along that side lies outside the image, and
+// the radius can far exceed its size. Reading outside the buffer does not always crash, which is
+// why this test should also be run in a build with -fsanitize=address.
+TEST(GaussBlur, ThinImagesMatchDirect2D) {
+    const Params params[] = {make_params(1.0, 1, 0), make_params(3.0, 9, 0),
+                             make_params(5.0, kMaxRadius, 0)};
+    const int sizes[][2] = {{1, 1}, {1, 9}, {9, 1}};
     unsigned seed = 1;
     for (const Params& p : params)
         for (const auto& size : sizes) {

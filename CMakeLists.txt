@@ -65,6 +65,7 @@ if(BUILD_TESTING)
   add_executable(pipeline_tests
     tests/test_pgm.cpp
     tests/test_weights.cpp
+    tests/test_border.cpp
     tests/test_filters.cpp)
   target_link_libraries(pipeline_tests PRIVATE pipeline_core GTest::gtest_main)
   if(PIPELINE_WITH_OPENMP)
