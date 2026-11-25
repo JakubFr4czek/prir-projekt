@@ -95,4 +95,44 @@ TEST(GaussBlur, SeparablePassesMatchDirect2D) {
         }
 }
 
+// D of the 3×3 neighbourhood given row by row, with the centre at n[1][1].
+uint32_t sobel_of(const int (&n)[3][3]) {
+    return sobel_d([&](int dx, int dy) { return n[1 + dy][1 + dx]; });
+}
+
+// D at (x, y) of a whole image, with neighbours outside it read through reflect101.
+uint32_t sobel_at(GrayIn B, int x, int y) {
+    return sobel_d([&](int dx, int dy) -> int {
+        return B.at(reflect101(x + dx, B.width), reflect101(y + dy, B.height));
+    });
+}
+
+TEST(Sobel, UniformNeighbourhoodGivesZero) {
+    EXPECT_EQ(sobel_of({{20, 20, 20}, {20, 20, 20}, {20, 20, 20}}), 0u);
+}
+
+// gx = (-20 + 200) + 2 * (-20 + 200) + (-20 + 200) = 720 and gy = 0.
+TEST(Sobel, VerticalEdgeGivesHorizontalChange) {
+    EXPECT_EQ(sobel_of({{20, 20, 200}, {20, 20, 200}, {20, 20, 200}}), 518400u);
+}
+
+// The edge runs diagonally, so the change is equal in both directions: gx = gy = 540.
+TEST(Sobel, DiagonalEdgeGivesBothChanges) {
+    EXPECT_EQ(sobel_of({{20, 20, 20}, {20, 20, 200}, {20, 200, 200}}), 583200u);
+}
+
+// Column 0 is bright and the rest is dark. At x = 0 reflect101 reads column 1 for the missing
+// column -1, so both sides are dark and D = 0; repeating the edge pixel would give D = 518,400.
+// At x = 1 the same edge is seen from inside the image, which shows that it is really there.
+TEST(Sobel, ReadsPixelsOutsideTheImageThroughReflect101) {
+    Image<uint8_t> B(4, 3);
+    for (int y = 0; y < B.height; ++y)
+        for (int x = 0; x < B.width; ++x) B.view().at(x, y) = x == 0 ? 200 : 20;
+
+    for (int y = 0; y < B.height; ++y) {
+        EXPECT_EQ(sobel_at(B.view(), 0, y), 0u) << "y = " << y;
+        EXPECT_EQ(sobel_at(B.view(), 1, y), 518400u) << "y = " << y;
+    }
+}
+
 }  // namespace
